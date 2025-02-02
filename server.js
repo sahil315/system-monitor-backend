@@ -250,7 +250,14 @@ app.get("/stats", async (req, res) => {
     }
 });
 
-// Start Server
-server.listen(5000, () => {
-    console.log("Server running on http://localhost:5000");
+// // Start Server
+// server.listen(5000, () => {
+//     console.log("Server running on http://localhost:5000");
+// });
+
+const PORT = 5000;
+const HOST = "0.0.0.0"; // Listen on all interfaces
+
+server.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
 });
