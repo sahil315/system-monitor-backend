@@ -22,7 +22,7 @@ const extractSensorData = (node, type, output) => {
         extractSensorData(sensor, type, output);
     });
 };
-const API_URL = process.env.LIBRE_MONITOR_URL || "http://localhost:8085/data.json";
+const API_URL = process.env.LIBRE_MONITOR_URL || "http://192.168.137.1:8085/data.json";  // Change this to your local IP
 
 // Function to fetch system stats
 const fetchSystemStats = async () => {
