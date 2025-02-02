@@ -22,11 +22,13 @@ const extractSensorData = (node, type, output) => {
         extractSensorData(sensor, type, output);
     });
 };
+const API_URL = process.env.LIBRE_MONITOR_URL || "http://localhost:8085/data.json";
 
 // Function to fetch system stats
 const fetchSystemStats = async () => {
     try {
-        const response = await axios.get("http://localhost:8085/data.json");
+        console.log(`Fetching system stats from: ${API_URL}`);  // Debugging
+        const response = await axios.get(API_URL);
         if (!response.data || !response.data.Children) {
             throw new Error("Invalid response format from Libre Hardware Monitor.");
         }
