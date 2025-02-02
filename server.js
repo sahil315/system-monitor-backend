@@ -6,7 +6,8 @@ const os = require("os");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "*" })); // Allow any origin
+
 
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
