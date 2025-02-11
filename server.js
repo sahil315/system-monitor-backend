@@ -6,9 +6,15 @@ const os = require("os");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const app = express();
+require("dotenv").config(); // Load environment variables
+
 // app.use(cors({ origin: "*" })); // Allow any origin
 app.use((req, res, next) => {
-    if (req.headers['x-api-key'] !== process.env.API_KEY) {
+    console.log("Received API Key:", req.headers["x-api-key"]);
+    console.log("Expected API Key:", process.env.API_KEY);
+    
+    if (req.headers["x-api-key"] !== process.env.API_KEY) {
+        console.warn("Unauthorized request detected!");
         return res.status(403).json({ error: "Unauthorized" });
     }
     next();
@@ -34,14 +40,25 @@ const API_URL = process.env.LIBRE_MONITOR_URL || "http://192.168.29.85:8086/data
 
 // Function to fetch system stats
 const fetchSystemStats = async () => {
-    try {
+  try {
         console.log(`Fetching system stats from: ${API_URL}`);  // Debugging
-        const response = await axios.get(API_URL);
+
+        // const response = await axios.get(API_URL, { timeout: 5000 }); // Add timeout
+        const response = await axios.get(API_URL, {
+            auth: {
+                username: "admin", 
+                password: "newPassword"
+            }
+        });
+        console.log("Received response:", response.data);  // Debug response
+
         if (!response.data || !response.data.Children) {
             throw new Error("Invalid response format from Libre Hardware Monitor.");
         }
-
         const systemData = response.data.Children[0]; // Main system data
+
+        return { hostname: response.data.Children[0], os: os.platform(), uptime: os.uptime() };
+    
 
         // Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
