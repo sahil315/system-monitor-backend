@@ -10,9 +10,10 @@ require("dotenv").config(); // Load environment variables
 
 // app.use(cors({ origin: "*" })); // Allow any origin
 app.use((req, res, next) => {
+    console.log("Headers Received:", req.headers);  // Debug
     console.log("Received API Key:", req.headers["x-api-key"]);
     console.log("Expected API Key:", process.env.API_KEY);
-    
+
     if (req.headers["x-api-key"] !== process.env.API_KEY) {
         console.warn("Unauthorized request detected!");
         return res.status(403).json({ error: "Unauthorized" });
