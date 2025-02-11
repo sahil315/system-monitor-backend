@@ -20,7 +20,11 @@ app.use((req, res, next) => {
     }
     next();
 });
-
+app.use(cors({
+    origin: "*",
+    allowedHeaders: ["x-api-key", "Content-Type", "Authorization"],
+    exposedHeaders: ["x-api-key"]
+}));
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
 
