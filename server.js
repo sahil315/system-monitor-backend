@@ -23,7 +23,9 @@ const extractSensorData = (node, type, output) => {
         extractSensorData(sensor, type, output);
     });
 };
-const API_URL = process.env.LIBRE_MONITOR_URL || "https://400e-2405-201-5c0f-38-4148-1a66-3f1e-cb45.ngrok-free.app/data.json";  // Change this to your local IP
+const API_URL = process.env.LIBRE_MONITOR_URL || "http://192.168.29.85:8086/data.json";
+
+// const API_URL = process.env.LIBRE_MONITOR_URL || "https://400e-2405-201-5c0f-38-4148-1a66-3f1e-cb45.ngrok-free.app/data.json";  // Change this to your local IP
 
 // Function to fetch system stats
 const fetchSystemStats = async () => {
