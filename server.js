@@ -6,7 +6,7 @@ const os = require("os");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const app = express();
-app.use(cors({ origin: "*" })); // Allow any origin
+// app.use(cors({ origin: "*" })); // Allow any origin
 app.use((req, res, next) => {
     if (req.headers['x-api-key'] !== process.env.API_KEY) {
         return res.status(403).json({ error: "Unauthorized" });
