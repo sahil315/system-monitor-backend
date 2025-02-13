@@ -54,7 +54,7 @@ const fetchSystemStats = async () => {
         // ✅ Fetch WITHOUT Auth (Libre Monitor Auth Removed)
         const response = await axios.get(API_URL);
 
-        console.log("✅ Received response:", response.data);
+        // console.log("✅ Received response:", response.data);
 
         if (!response.data || !response.data.Children) {
             throw new Error("Invalid response format from Libre Hardware Monitor.");
@@ -193,7 +193,7 @@ const fetchSystemStats = async () => {
                             if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
                         }
                         if (sensorGroup.Text === "Data") {
-                            console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
+                            // console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
                             sensorGroup.Children.forEach(sensor => {
                                 if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
                                 if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
