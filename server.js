@@ -242,22 +242,36 @@ app.get("/stream", async (req, res) => {
 });
 
 // WebSocket
-wss.on("connection", async (ws) => {
-    console.log("Client connected via WebSocket");
+wss.on("connection", (ws) => {
+    console.log("New WebSocket connection established.");
 
-    const sendStats = async () => {
+    ws.on("message", (message) => {
         try {
-            const stats = await fetchSystemStats();
-            ws.send(JSON.stringify(stats));
-        } catch (err) {
-            console.error("Error sending stats:", err);
+            const data = JSON.parse(message);
+            if (!data.api_key || data.api_key !== process.env.API_KEY) {
+                console.warn("WebSocket Unauthorized request!");
+                ws.close(1008, "Unauthorized");
+                return;
+            }
+            console.log("WebSocket authenticated successfully.");
+
+            const sendStats = async () => {
+                try {
+                    const stats = await fetchSystemStats();
+                    ws.send(JSON.stringify(stats));
+                } catch (err) {
+                    console.error("Error sending stats:", err);
+                }
+            };
+
+            const interval = setInterval(sendStats, 1000);
+            sendStats();
+
+            ws.on("close", () => clearInterval(interval));
+        } catch (error) {
+            console.error("Error parsing WebSocket message:", error);
         }
-    };
-
-    const interval = setInterval(sendStats, 1000);
-    sendStats();
-
-    ws.on("close", () => clearInterval(interval));
+    });
 });
 
 // REST API
