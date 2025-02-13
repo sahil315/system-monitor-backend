@@ -33,7 +33,16 @@ app.use((req, res, next) => {
 
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
+const extractSensorData = (node, type, output) => {
+    if (!node.Children) return;
 
+    node.Children.forEach(sensor => {
+        if (sensor.Type === type) {
+            output.push({ name: sensor.Text, value: sensor.Value });
+        }
+        extractSensorData(sensor, type, output);
+    });
+};
 // ✅ New Libre Monitor API URL (No Auth Required)
 const API_URL = "https://libre.pcstats.site/data.json";
 
