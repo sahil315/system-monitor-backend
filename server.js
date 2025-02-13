@@ -253,6 +253,55 @@ app.get("/stream", async (req, res) => {
 });
 
 // WebSocket
+// wss.on("connection", (ws) => {
+//     console.log("New WebSocket connection established.");
+
+//     ws.on("message", (message) => {
+//         try {
+//             const data = JSON.parse(message);
+//             if (!data.api_key || data.api_key !== process.env.API_KEY) {
+//                 console.warn("WebSocket Unauthorized request!");
+//                 ws.close(1008, "Unauthorized");
+//                 return;
+//             }
+//             console.log("WebSocket authenticated successfully.");
+
+//             const sendStats = async () => {
+//                 try {
+//                     const stats = await fetchSystemStats();
+//                     ws.send(JSON.stringify(stats));
+//                 } catch (err) {
+//                     console.error("Error sending stats:", err);
+//                 }
+//             };
+
+//             const interval = setInterval(sendStats, 1000);
+//             sendStats();
+
+//             ws.on("close", () => clearInterval(interval));
+//         } catch (error) {
+//             console.error("Error parsing WebSocket message:", error);
+//         }
+//     });
+// });
+
+// Store the last sent system stats for comparison
+let previousStats = null;
+
+// Function to check for changed values
+const getChangedValues = (newStats, oldStats) => {
+    if (!oldStats) return newStats; // Send everything if first-time connection
+
+    let changedStats = {};
+    for (let key in newStats) {
+        if (JSON.stringify(newStats[key]) !== JSON.stringify(oldStats[key])) {
+            changedStats[key] = newStats[key]; // Only store changed values
+        }
+    }
+    return Object.keys(changedStats).length > 0 ? changedStats : null;
+};
+
+// WebSocket Connection Handling
 wss.on("connection", (ws) => {
     console.log("New WebSocket connection established.");
 
@@ -266,17 +315,24 @@ wss.on("connection", (ws) => {
             }
             console.log("WebSocket authenticated successfully.");
 
+            // Function to send updated stats only
             const sendStats = async () => {
                 try {
-                    const stats = await fetchSystemStats();
-                    ws.send(JSON.stringify(stats));
+                    const newStats = await fetchSystemStats();
+                    const changedStats = getChangedValues(newStats, previousStats);
+
+                    if (changedStats) {
+                        ws.send(JSON.stringify(changedStats));
+                        previousStats = newStats; // Update stored stats
+                    }
                 } catch (err) {
                     console.error("Error sending stats:", err);
                 }
             };
 
-            const interval = setInterval(sendStats, 1000);
+            // Run initially & then at an interval
             sendStats();
+            const interval = setInterval(sendStats, 1000);
 
             ws.on("close", () => clearInterval(interval));
         } catch (error) {
@@ -284,6 +340,7 @@ wss.on("connection", (ws) => {
         }
     });
 });
+
 
 // REST API
 app.get("/stats", async (req, res) => {
