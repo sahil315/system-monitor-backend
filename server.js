@@ -6,7 +6,6 @@ const os = require("os");
 const fs = require("fs");
 const { execSync } = require("child_process");
 require("dotenv").config(); // Load environment variables
-
 const app = express();
 
 // ✅ Allow CORS for `api.pcstats.site`
@@ -18,14 +17,14 @@ app.use(cors({
 
 // ✅ Middleware for API Key Authentication
 app.use((req, res, next) => {
-    console.log("Headers Received:", req.headers);  // Debugging
+    console.log("🔹 Headers Received:", req.headers);  // Debugging
     const receivedKey = req.headers["x-api-key"];
     const expectedKey = process.env.API_KEY;
 
-    console.log("Received API Key:", receivedKey);
-    console.log("Expected API Key:", expectedKey);
+    console.log("🔹 Received API Key:", receivedKey);
+    console.log("🔹 Expected API Key:", expectedKey);
 
-    if (receivedKey !== expectedKey) {
+    if (!receivedKey || receivedKey !== expectedKey) {
         console.warn("🚨 Unauthorized request detected!");
         return res.status(403).json({ error: "Unauthorized" });
     }
@@ -35,29 +34,24 @@ app.use((req, res, next) => {
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// ✅ New Libre Monitor API URL
-const API_URL = "https://libre.pcstats.site/data.json"; 
+// ✅ New Libre Monitor API URL (No Auth Required)
+const API_URL = "https://libre.pcstats.site/data.json";
 
-// const API_URL = process.env.LIBRE_MONITOR_URL || "https://400e-2405-201-5c0f-38-4148-1a66-3f1e-cb45.ngrok-free.app/data.json";  // Change this to your local IP
-
-// Function to fetch system stats
+// ✅ Function to Fetch System Stats from Libre Monitor
 const fetchSystemStats = async () => {
-  try {
-        console.log(`Fetching system stats from: ${API_URL}`);  // Debugging
+    try {
+        console.log(`📡 Fetching system stats from: ${API_URL}`);
 
-        const response = await axios.get(API_URL, { timeout: 5000 }); // Add timeout
-        // const response = await axios.get(API_URL, {
-        //     auth: {
-        //         username: "admin", 
-        //         password: "newPassword"
-        //     }
-        // });
-        console.log("Received response:", response.data);  // Debug response
+        // ✅ Fetch WITHOUT Auth (Libre Monitor Auth Removed)
+        const response = await axios.get(API_URL);
+
+        console.log("✅ Received response:", response.data);
 
         if (!response.data || !response.data.Children) {
             throw new Error("Invalid response format from Libre Hardware Monitor.");
         }
-        const systemData = response.data.Children[0]; // Main system data
+
+        const systemData = response.data.Children[0];
 
         return { hostname: response.data.Children[0], os: os.platform(), uptime: os.uptime() };
     
