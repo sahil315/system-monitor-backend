@@ -5,41 +5,38 @@ const cors = require("cors");
 const os = require("os");
 const fs = require("fs");
 const { execSync } = require("child_process");
-const app = express();
 require("dotenv").config(); // Load environment variables
 
-// app.use(cors({ origin: "*" })); // Allow any origin
-app.use((req, res, next) => {
-    console.log("Headers Received:", req.headers);  // Debug
-    console.log("Received API Key:", req.headers["x-api-key"]);
-    console.log("Expected API Key:", process.env.API_KEY);
+const app = express();
 
-    if (req.headers["x-api-key"] !== process.env.API_KEY) {
-        console.warn("Unauthorized request detected!");
-        return res.status(403).json({ error: "Unauthorized" });
-    }
-    next();
-});
+// ✅ Allow CORS for `api.pcstats.site`
 app.use(cors({
     origin: "*",
     allowedHeaders: ["x-api-key", "Content-Type", "Authorization"],
     exposedHeaders: ["x-api-key"]
 }));
+
+// ✅ Middleware for API Key Authentication
+app.use((req, res, next) => {
+    console.log("Headers Received:", req.headers);  // Debugging
+    const receivedKey = req.headers["x-api-key"];
+    const expectedKey = process.env.API_KEY;
+
+    console.log("Received API Key:", receivedKey);
+    console.log("Expected API Key:", expectedKey);
+
+    if (receivedKey !== expectedKey) {
+        console.warn("🚨 Unauthorized request detected!");
+        return res.status(403).json({ error: "Unauthorized" });
+    }
+    next();
+});
+
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Function to extract relevant sensor data
-const extractSensorData = (node, type, output) => {
-    if (!node.Children) return;
-
-    node.Children.forEach(sensor => {
-        if (sensor.Type === type) {
-            output.push({ name: sensor.Text, value: sensor.Value });
-        }
-        extractSensorData(sensor, type, output);
-    });
-};
-const API_URL = process.env.LIBRE_MONITOR_URL || "http://192.168.29.85:8086/data.json";
+// ✅ New Libre Monitor API URL
+const API_URL = "https://libre.pcstats.site/data.json"; 
 
 // const API_URL = process.env.LIBRE_MONITOR_URL || "https://400e-2405-201-5c0f-38-4148-1a66-3f1e-cb45.ngrok-free.app/data.json";  // Change this to your local IP
 
@@ -48,13 +45,13 @@ const fetchSystemStats = async () => {
   try {
         console.log(`Fetching system stats from: ${API_URL}`);  // Debugging
 
-        // const response = await axios.get(API_URL, { timeout: 5000 }); // Add timeout
-        const response = await axios.get(API_URL, {
-            auth: {
-                username: "admin", 
-                password: "newPassword"
-            }
-        });
+        const response = await axios.get(API_URL, { timeout: 5000 }); // Add timeout
+        // const response = await axios.get(API_URL, {
+        //     auth: {
+        //         username: "admin", 
+        //         password: "newPassword"
+        //     }
+        // });
         console.log("Received response:", response.data);  // Debug response
 
         if (!response.data || !response.data.Children) {
