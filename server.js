@@ -53,7 +53,7 @@ const fetchSystemStats = async () => {
 
         const systemData = response.data.Children[0];
 
-        return { hostname: response.data.Children[0], os: os.platform(), uptime: os.uptime() };
+        // return { hostname: response.data.Children[0], os: os.platform(), uptime: os.uptime() };
     
 
         // Initialize data storage
