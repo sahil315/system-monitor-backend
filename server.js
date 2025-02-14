@@ -48,6 +48,7 @@ const getDrivePartitions = () => {
         let partitions = [];
 
         if (process.platform === "win32") {
+            // ✅ Windows: Get C:, D:, etc.
             const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
             const lines = driveInfo.trim().split("\n").slice(1);
 
@@ -55,10 +56,10 @@ const getDrivePartitions = () => {
                 const parts = line.trim().split(/\s+/);
                 if (parts.length === 3) {
                     const driveLetter = parts[0];  // C:, D:, etc.
-                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); 
+                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Convert to GB
                     const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
                     const usedSpace = totalSpace - freeSpace;
-                    
+
                     partitions.push({
                         name: driveLetter,
                         total: totalSpace.toFixed(2) + " GB",
@@ -68,7 +69,7 @@ const getDrivePartitions = () => {
                 }
             });
         } else {
-            // Linux/macOS
+            // ✅ Linux/macOS: Get actual disk partitions
             const driveInfo = execSync("df -h --output=source,size,used,avail,target").toString();
             const lines = driveInfo.trim().split("\n").slice(1);
 
@@ -184,7 +185,7 @@ const fetchSystemStats = async () => {
                     }
                 });
             
-                // ✅ Keep only WD Blue partitions (avoid system mounts)
+                // ✅ Merge Drive Volumes (C:, D:, etc.) into the object
                 driveData.partitions = getDrivePartitions();
             
                 drives.push(driveData);
