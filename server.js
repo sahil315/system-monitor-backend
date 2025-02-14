@@ -46,7 +46,7 @@ const extractSensorData = (node, type, output) => {
 const getDrivePartitions = () => {
     try {
         let partitions = [];
-        
+
         if (process.platform === "win32") {
             const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
             const lines = driveInfo.trim().split("\n").slice(1);
@@ -77,8 +77,9 @@ const getDrivePartitions = () => {
                 if (parts.length >= 5) {
                     const mountPoint = parts[4];
 
-                    // ❌ Exclude system mounts like /dev, /proc, /sys, /tmp, etc.
-                    if (mountPoint.startsWith("/dev") || mountPoint.startsWith("/proc") || mountPoint.startsWith("/sys") || mountPoint.startsWith("/run")) {
+                    // ❌ Exclude system partitions (temp directories, RAM disks, special mounts)
+                    const excludedMounts = ["/dev", "/proc", "/sys", "/run", "/tmp", "/opt/render-ssh"];
+                    if (excludedMounts.some(mount => mountPoint.startsWith(mount))) {
                         return; // Skip these entries
                     }
 
@@ -99,6 +100,7 @@ const getDrivePartitions = () => {
         return [];
     }
 };
+
 
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
@@ -160,28 +162,34 @@ const fetchSystemStats = async () => {
 
             if (component.Text.includes("WD Blue")) {
                 let driveData = {
-                    name: "WD Blue SN580",
+                    name: component.Text, // "WD Blue SN580 2TB"
                     used: "N/A",
-                    partitions: getDrivePartitions(),
                     temperature: "N/A",
                     read_speed: "N/A",
                     write_speed: "N/A"
                 };
-
+            
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
-                        driveData.used = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                        const usedSpace = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                        driveData.used = usedSpace;
                     }
                     if (sensorGroup.Text === "Temperatures") {
-                        driveData.temperature = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                        const temp = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                        driveData.temperature = temp;
                     }
                     if (sensorGroup.Text === "Throughput") {
                         driveData.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
                         driveData.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
                     }
                 });
+            
+                // ✅ Keep only WD Blue partitions (avoid system mounts)
+                driveData.partitions = getDrivePartitions();
+            
                 drives.push(driveData);
             }
+
 
             if (component.Text === "Ethernet") {
                 component.Children.forEach(sensorGroup => {
