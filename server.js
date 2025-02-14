@@ -46,16 +46,19 @@ const extractSensorData = (node, type, output) => {
 const getDrivePartitions = () => {
     try {
         let partitions = [];
+        
         if (process.platform === "win32") {
             const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
             const lines = driveInfo.trim().split("\n").slice(1);
+
             lines.forEach(line => {
                 const parts = line.trim().split(/\s+/);
                 if (parts.length === 3) {
-                    const driveLetter = parts[0];
-                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3);
+                    const driveLetter = parts[0];  // C:, D:, etc.
+                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); 
                     const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
                     const usedSpace = totalSpace - freeSpace;
+                    
                     partitions.push({
                         name: driveLetter,
                         total: totalSpace.toFixed(2) + " GB",
@@ -65,27 +68,38 @@ const getDrivePartitions = () => {
                 }
             });
         } else {
+            // Linux/macOS
             const driveInfo = execSync("df -h --output=source,size,used,avail,target").toString();
             const lines = driveInfo.trim().split("\n").slice(1);
+
             lines.forEach(line => {
                 const parts = line.split(/\s+/);
                 if (parts.length >= 5) {
+                    const mountPoint = parts[4];
+
+                    // ❌ Exclude system mounts like /dev, /proc, /sys, /tmp, etc.
+                    if (mountPoint.startsWith("/dev") || mountPoint.startsWith("/proc") || mountPoint.startsWith("/sys") || mountPoint.startsWith("/run")) {
+                        return; // Skip these entries
+                    }
+
                     partitions.push({
-                        name: parts[0],  
+                        name: parts[0],  // /dev/sda1, /dev/nvme0n1p1
                         total: parts[1],  
                         used: parts[2],  
                         free: parts[3],  
-                        mount: parts[4]
+                        mount: mountPoint
                     });
                 }
             });
         }
+
         return partitions;
     } catch (error) {
         console.error("❌ Error fetching drive partitions:", error);
         return [];
     }
 };
+
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
     try {
