@@ -46,52 +46,36 @@ const extractSensorData = (node, type, output) => {
 const getDrivePartitions = () => {
     try {
         let partitions = [];
+        const driveInfo = execSync("df -h --output=target,size,used,avail | tail -n +2").toString();
+        const lines = driveInfo.trim().split("\n");
 
-        if (process.platform === "win32") {
-            // ✅ Windows: Get C:, D:, etc.
-            const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
-            const lines = driveInfo.trim().split("\n").slice(1);
+        lines.forEach(line => {
+            const parts = line.trim().split(/\s+/);
+            if (parts.length === 4) {
+                const mountPoint = parts[0]; // e.g. `/`, `/mnt/storage`
+                const totalSpace = parts[1];
+                const usedSpace = parts[2];
+                const freeSpace = parts[3];
 
-            lines.forEach(line => {
-                const parts = line.trim().split(/\s+/);
-                if (parts.length === 3) {
-                    const driveLetter = parts[0];  // C:, D:, etc.
-                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Convert to GB
-                    const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
-                    const usedSpace = totalSpace - freeSpace;
-
+                // ✅ Only keep the main SSD, ignore system filesystems
+                if (mountPoint !== "/" && !mountPoint.includes("tmpfs") && !mountPoint.includes("overlay")) {
                     partitions.push({
-                        name: driveLetter,
-                        total: totalSpace.toFixed(2) + " GB",
-                        used: usedSpace.toFixed(2) + " GB",
-                        free: freeSpace.toFixed(2) + " GB"
+                        name: mountPoint, // Keep relevant names
+                        total: totalSpace,
+                        used: usedSpace,
+                        free: freeSpace
                     });
                 }
-            });
-        } else {
-            // ✅ Linux/macOS: Get disk partitions using `df -h`
-            const driveInfo = execSync("df -h --output=source,size,used,avail").toString();
-            const lines = driveInfo.trim().split("\n").slice(1);
-
-            lines.forEach(line => {
-                const parts = line.split(/\s+/);
-                if (parts.length >= 4) {
-                    partitions.push({
-                        name: parts[0],  // /dev/sda1, /dev/nvme0n1p1
-                        total: parts[1],  
-                        used: parts[2],  
-                        free: parts[3]  
-                    });
-                }
-            });
-        }
+            }
+        });
 
         return partitions;
     } catch (error) {
-        console.error("❌ Error fetching drive partitions:", error);
+        console.error("Error fetching drive partitions:", error);
         return [];
     }
 };
+
 
 
 // ✅ Function to Fetch System Stats
@@ -157,32 +141,17 @@ const fetchSystemStats = async () => {
                 // Modify this part in fetchSystemStats()
                 if (component.Text.includes("WD Blue")) {
                     let driveData = {
-                        name: "WD Blue SN580",
-                        used: "N/A",
-                        partitions: getDrivePartitions(),
-                        temperature: "N/A",
-                        read_speed: "N/A",
-                        write_speed: "N/A"
+                        name: component.Text,
+                        used: component.Children.find(item => item.Text === "Used Space")?.Value || "N/A",
+                        temperature: component.Children.find(item => item.Text === "Temperature")?.Value || "N/A",
+                        read_speed: component.Children.find(item => item.Text === "Read Rate")?.Value || "N/A",
+                        write_speed: component.Children.find(item => item.Text === "Write Rate")?.Value || "N/A",
+                        partitions: getDrivePartitions() // Only keep real drives
                     };
                 
-                    component.Children.forEach(sensorGroup => {
-                        if (sensorGroup.Text === "Load") {
-                            const usedSpace = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
-                            driveData.used = usedSpace;
-                        }
-                        if (sensorGroup.Text === "Temperatures") {
-                            const temp = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
-                            driveData.temperature = temp;
-                        }
-                        if (sensorGroup.Text === "Throughput") {
-                            driveData.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
-                            driveData.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
-                        }
-                    });
-                
-                    // Ensure we push the drive data only if valid
                     drives.push(driveData);
                 }
+
 
 
             if (component.Text === "Ethernet") {
