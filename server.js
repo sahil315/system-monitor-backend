@@ -43,64 +43,6 @@ const extractSensorData = (node, type, output) => {
     });
 };
 // ✅ Cross-Platform Drive Partitions Fetcher
-const getDrivePartitions = () => {
-    try {
-        let partitions = [];
-
-        if (process.platform === "win32") {
-            // ✅ Windows: Get C:, D:, etc.
-            const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
-            const lines = driveInfo.trim().split("\n").slice(1);
-
-            lines.forEach(line => {
-                const parts = line.trim().split(/\s+/);
-                if (parts.length === 3) {
-                    const driveLetter = parts[0];  // C:, D:, etc.
-                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Convert to GB
-                    const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
-                    const usedSpace = totalSpace - freeSpace;
-
-                    partitions.push({
-                        name: driveLetter,
-                        total: totalSpace.toFixed(2) + " GB",
-                        used: usedSpace.toFixed(2) + " GB",
-                        free: freeSpace.toFixed(2) + " GB"
-                    });
-                }
-            });
-        } else {
-            // ✅ Linux/macOS: Get actual disk partitions
-            const driveInfo = execSync("df -h --output=source,size,used,avail,target").toString();
-            const lines = driveInfo.trim().split("\n").slice(1);
-
-            lines.forEach(line => {
-                const parts = line.split(/\s+/);
-                if (parts.length >= 5) {
-                    const mountPoint = parts[4];
-
-                    // ❌ Exclude system partitions (temp directories, RAM disks, special mounts)
-                    const excludedMounts = ["/dev", "/proc", "/sys", "/run", "/tmp", "/opt/render-ssh"];
-                    if (excludedMounts.some(mount => mountPoint.startsWith(mount))) {
-                        return; // Skip these entries
-                    }
-
-                    partitions.push({
-                        name: parts[0],  // /dev/sda1, /dev/nvme0n1p1
-                        total: parts[1],  
-                        used: parts[2],  
-                        free: parts[3],  
-                        mount: mountPoint
-                    });
-                }
-            });
-        }
-
-        return partitions;
-    } catch (error) {
-        console.error("❌ Error fetching drive partitions:", error);
-        return [];
-    }
-};
 
 
 // ✅ Function to Fetch System Stats
@@ -161,35 +103,65 @@ const fetchSystemStats = async () => {
                 });
             }
 
-            if (component.Text.includes("WD Blue")) {
-                let driveData = {
-                    name: component.Text, // "WD Blue SN580 2TB"
-                    used: "N/A",
-                    temperature: "N/A",
-                    read_speed: "N/A",
-                    write_speed: "N/A"
+           const getDrivePartitions = () => {
+                    try {
+                        let partitions = [];
+                        const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
+                        const lines = driveInfo.trim().split("\n").slice(1);
+                
+                        lines.forEach(line => {
+                            const parts = line.trim().split(/\s+/);
+                            if (parts.length === 3) {
+                                const driveLetter = parts[0]; // C:, D:, etc.
+                                const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Free space in GB
+                                const totalSpace = parseInt(parts[2], 10) / (1024 ** 3); // Total space in GB
+                                const usedSpace = totalSpace - freeSpace; // Correctly calculate used space
+                
+                                partitions.push({
+                                    name: driveLetter,
+                                    total: totalSpace.toFixed(2) + " GB",
+                                    used: usedSpace.toFixed(2) + " GB",
+                                    free: freeSpace.toFixed(2) + " GB"
+                                });
+                            }
+                        });
+                
+                        return partitions;
+                    } catch (error) {
+                        console.error("Error fetching drive partitions:", error);
+                        return [];
+                    }
                 };
-            
-                component.Children.forEach(sensorGroup => {
-                    if (sensorGroup.Text === "Load") {
-                        const usedSpace = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
-                        driveData.used = usedSpace;
-                    }
-                    if (sensorGroup.Text === "Temperatures") {
-                        const temp = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
-                        driveData.temperature = temp;
-                    }
-                    if (sensorGroup.Text === "Throughput") {
-                        driveData.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
-                        driveData.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
-                    }
-                });
-            
-                // ✅ Merge Drive Volumes (C:, D:, etc.) into the object
-                driveData.partitions = getDrivePartitions();
-            
-                drives.push(driveData);
-            }
+                
+                // Modify this part in fetchSystemStats()
+                if (component.Text.includes("WD Blue")) {
+                    let driveData = {
+                        name: "WD Blue SN580",
+                        used: "N/A",
+                        partitions: getDrivePartitions(),
+                        temperature: "N/A",
+                        read_speed: "N/A",
+                        write_speed: "N/A"
+                    };
+                
+                    component.Children.forEach(sensorGroup => {
+                        if (sensorGroup.Text === "Load") {
+                            const usedSpace = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                            driveData.used = usedSpace;
+                        }
+                        if (sensorGroup.Text === "Temperatures") {
+                            const temp = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                            driveData.temperature = temp;
+                        }
+                        if (sensorGroup.Text === "Throughput") {
+                            driveData.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
+                            driveData.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
+                        }
+                    });
+                
+                    // Ensure we push the drive data only if valid
+                    drives.push(driveData);
+                }
 
 
             if (component.Text === "Ethernet") {
