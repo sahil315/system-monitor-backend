@@ -59,6 +59,7 @@ const getDrivePartitions = () => {
 
                 // ✅ Keep only REAL storage devices
                 if (
+                    mountPoint !== "/" &&
                     !mountPoint.includes("/dev") &&
                     !mountPoint.includes("/tmp") &&
                     !mountPoint.includes("/etc/secrets") &&
@@ -106,9 +107,17 @@ const fetchSystemStats = async () => {
         const motherboard = { voltages: [], temps: [], fans: [] };
         const ram = { load: "N/A", used: "N/A", available: "N/A" };
         const gpu = { fan_rpm: [], load: [], clock: [], memory: {}, temp: [] };
-        const drives = getDrivePartitions();
+       
         const network = { sent: "N/A", received: "N/A", uploaded: "N/A", downloaded: "N/A", utilization: "N/A" };
-
+        const drives = [];
+            let wdBlueDrive = {
+                name: "WD Blue SN580 2TB",
+                used: "N/A",
+                temperature: "N/A",
+                read_speed: "N/A",
+                write_speed: "N/A",
+                partitions: getDrivePartitions()
+            };
         // ✅ Traverse System Data
         systemData.Children.forEach((component) => {
             if (component.Text.includes("Gigabyte")) {
@@ -148,19 +157,22 @@ const fetchSystemStats = async () => {
            
                 
                 // Modify this part in fetchSystemStats()
-                if (component.Text.includes("WD Blue")) {
-                    let driveData = {
-                        name: component.Text,
-                        used: component.Children.find(item => item.Text === "Used Space")?.Value || "N/A",
-                        temperature: component.Children.find(item => item.Text === "Temperature")?.Value || "N/A",
-                        read_speed: component.Children.find(item => item.Text === "Read Rate")?.Value || "N/A",
-                        write_speed: component.Children.find(item => item.Text === "Write Rate")?.Value || "N/A",
-                        partitions: getDrivePartitions() // Only keep real drives
-                    };
-                
-                    drives.push(driveData);
-                }
-
+               if (component.Text.includes("WD Blue")) {
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Load") {
+                        wdBlueDrive.used = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Temperatures") {
+                        wdBlueDrive.temperature = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Throughput") {
+                        wdBlueDrive.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
+                        wdBlueDrive.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
+                    }
+                });
+            }
+        // ✅ Keep only WD Blue in `drives` array
+        drives.push(wdBlueDrive);
 
 
             if (component.Text === "Ethernet") {
