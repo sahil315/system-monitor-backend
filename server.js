@@ -141,7 +141,19 @@ const fetchSystemStats = async () => {
                     if (sensorGroup.Text === "Powers") extractSensorData(sensorGroup, "Power", cpu.power);
                 });
             }
-
+            if (component.Text.includes("NVIDIA GeForce")) {
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Clocks") extractSensorData(sensorGroup, "Clock", gpu.clock);
+                    if (sensorGroup.Text === "Temperatures") extractSensorData(sensorGroup, "Temperature", gpu.temp);
+                    if (sensorGroup.Text === "Load") extractSensorData(sensorGroup, "Load", gpu.load);
+                    if (sensorGroup.Text === "Fans") extractSensorData(sensorGroup, "Fan", gpu.fan_rpm);
+                    if (sensorGroup.Text === "Data") {
+                        sensorGroup.Children.forEach(memSensor => {
+                            gpu.memory[memSensor.Text] = memSensor.Value;
+                        });
+                    }
+                });
+            }
             if (component.Text.includes("Memory")) {
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
