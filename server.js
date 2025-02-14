@@ -57,8 +57,16 @@ const getDrivePartitions = () => {
                 const usedSpace = parts[2];
                 const freeSpace = parts[3];
 
-                // ✅ Only keep the main SSD, ignore system filesystems
-                if (mountPoint !== "/" && !mountPoint.includes("tmpfs") && !mountPoint.includes("overlay")) {
+                // ✅ Keep only REAL storage devices
+                if (
+                    !mountPoint.includes("/dev") &&
+                    !mountPoint.includes("/tmp") &&
+                    !mountPoint.includes("/etc/secrets") &&
+                    !mountPoint.includes("/dev/shm") &&
+                    !mountPoint.includes("/opt/render-ssh") &&
+                    !mountPoint.includes("/proc") &&
+                    !mountPoint.includes("/sys")
+                ) {
                     partitions.push({
                         name: mountPoint, // Keep relevant names
                         total: totalSpace,
@@ -71,10 +79,11 @@ const getDrivePartitions = () => {
 
         return partitions;
     } catch (error) {
-        console.error("Error fetching drive partitions:", error);
+        console.error("❌ Error fetching drive partitions:", error);
         return [];
     }
 };
+
 
 
 
