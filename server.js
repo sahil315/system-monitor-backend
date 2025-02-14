@@ -290,7 +290,7 @@ let previousStats = null;
 
 // Function to check for changed values
 const getChangedValues = (newStats, oldStats) => {
-    if (!oldStats) return newStats; // First-time connection, send everything
+    if (!oldStats) return newStats; // Send everything if first-time connection
 
     let changedStats = {};
     for (let key in newStats) {
@@ -302,53 +302,44 @@ const getChangedValues = (newStats, oldStats) => {
 };
 
 // WebSocket Connection Handling
-wss.on("connection", async (ws) => {
-    console.log("✅ New WebSocket connection established.");
+wss.on("connection", (ws) => {
+    console.log("New WebSocket connection established.");
 
-    ws.on("message", async (message) => {
+    ws.on("message", (message) => {
         try {
             const data = JSON.parse(message);
             if (!data.api_key || data.api_key !== process.env.API_KEY) {
-                console.warn("🚨 WebSocket Unauthorized request!");
+                console.warn("WebSocket Unauthorized request!");
                 ws.close(1008, "Unauthorized");
                 return;
             }
-            console.log("✅ WebSocket authenticated successfully.");
+            console.log("WebSocket authenticated successfully.");
 
-            // Fetch full system stats and send it first
-            const fullStats = await fetchSystemStats();
-            ws.send(JSON.stringify(fullStats));
-            previousStats = fullStats; // Store full data
-
-            // Function to send only changed stats
+            // Function to send updated stats only
             const sendStats = async () => {
                 try {
                     const newStats = await fetchSystemStats();
                     const changedStats = getChangedValues(newStats, previousStats);
 
                     if (changedStats) {
-                        ws.send(JSON.stringify(changedStats)); // Send only updates
+                        ws.send(JSON.stringify(changedStats));
                         previousStats = newStats; // Update stored stats
                     }
                 } catch (err) {
-                    console.error("❌ Error sending stats:", err);
+                    console.error("Error sending stats:", err);
                 }
             };
 
-            // Send updates every second
+            // Run initially & then at an interval
+            sendStats();
             const interval = setInterval(sendStats, 1000);
 
-            ws.on("close", () => {
-                console.log("⚠️ WebSocket connection closed.");
-                clearInterval(interval);
-            });
-
+            ws.on("close", () => clearInterval(interval));
         } catch (error) {
-            console.error("❌ Error parsing WebSocket message:", error);
+            console.error("Error parsing WebSocket message:", error);
         }
     });
 });
-
 
 
 // REST API
