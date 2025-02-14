@@ -44,34 +44,55 @@ const extractSensorData = (node, type, output) => {
 };
 // ✅ Cross-Platform Drive Partitions Fetcher
 const getDrivePartitions = () => {
-                    try {
-                        let partitions = [];
-                        const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
-                        const lines = driveInfo.trim().split("\n").slice(1);
-                
-                        lines.forEach(line => {
-                            const parts = line.trim().split(/\s+/);
-                            if (parts.length === 3) {
-                                const driveLetter = parts[0]; // C:, D:, etc.
-                                const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Free space in GB
-                                const totalSpace = parseInt(parts[2], 10) / (1024 ** 3); // Total space in GB
-                                const usedSpace = totalSpace - freeSpace; // Correctly calculate used space
-                
-                                partitions.push({
-                                    name: driveLetter,
-                                    total: totalSpace.toFixed(2) + " GB",
-                                    used: usedSpace.toFixed(2) + " GB",
-                                    free: freeSpace.toFixed(2) + " GB"
-                                });
-                            }
-                        });
-                
-                        return partitions;
-                    } catch (error) {
-                        console.error("Error fetching drive partitions:", error);
-                        return [];
-                    }
-                };
+    try {
+        let partitions = [];
+
+        if (process.platform === "win32") {
+            // ✅ Windows: Get C:, D:, etc.
+            const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
+            const lines = driveInfo.trim().split("\n").slice(1);
+
+            lines.forEach(line => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length === 3) {
+                    const driveLetter = parts[0];  // C:, D:, etc.
+                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3); // Convert to GB
+                    const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
+                    const usedSpace = totalSpace - freeSpace;
+
+                    partitions.push({
+                        name: driveLetter,
+                        total: totalSpace.toFixed(2) + " GB",
+                        used: usedSpace.toFixed(2) + " GB",
+                        free: freeSpace.toFixed(2) + " GB"
+                    });
+                }
+            });
+        } else {
+            // ✅ Linux/macOS: Get disk partitions using `df -h`
+            const driveInfo = execSync("df -h --output=source,size,used,avail").toString();
+            const lines = driveInfo.trim().split("\n").slice(1);
+
+            lines.forEach(line => {
+                const parts = line.split(/\s+/);
+                if (parts.length >= 4) {
+                    partitions.push({
+                        name: parts[0],  // /dev/sda1, /dev/nvme0n1p1
+                        total: parts[1],  
+                        used: parts[2],  
+                        free: parts[3]  
+                    });
+                }
+            });
+        }
+
+        return partitions;
+    } catch (error) {
+        console.error("❌ Error fetching drive partitions:", error);
+        return [];
+    }
+};
+
 
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
