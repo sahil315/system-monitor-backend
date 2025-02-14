@@ -32,93 +32,161 @@ const wss = new WebSocket.Server({ server });
 
 const API_URL = "https://libre.pcstats.site/data.json";
 
+// ✅ Extract Sensor Data
+const extractSensorData = (node, type, output) => {
+    if (!node.Children) return;
+    node.Children.forEach(sensor => {
+        if (sensor.Type === type) {
+            output.push({ name: sensor.Text, value: sensor.Value });
+        }
+        extractSensorData(sensor, type, output);
+    });
+};
+// ✅ Cross-Platform Drive Partitions Fetcher
+const getDrivePartitions = () => {
+    try {
+        let partitions = [];
+        if (process.platform === "win32") {
+            const driveInfo = execSync("wmic logicaldisk get DeviceID,Size,FreeSpace").toString();
+            const lines = driveInfo.trim().split("\n").slice(1);
+            lines.forEach(line => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length === 3) {
+                    const driveLetter = parts[0];
+                    const freeSpace = parseInt(parts[1], 10) / (1024 ** 3);
+                    const totalSpace = parseInt(parts[2], 10) / (1024 ** 3);
+                    const usedSpace = totalSpace - freeSpace;
+                    partitions.push({
+                        name: driveLetter,
+                        total: totalSpace.toFixed(2) + " GB",
+                        used: usedSpace.toFixed(2) + " GB",
+                        free: freeSpace.toFixed(2) + " GB"
+                    });
+                }
+            });
+        } else {
+            const driveInfo = execSync("df -h --output=source,size,used,avail,target").toString();
+            const lines = driveInfo.trim().split("\n").slice(1);
+            lines.forEach(line => {
+                const parts = line.split(/\s+/);
+                if (parts.length >= 5) {
+                    partitions.push({
+                        name: parts[0],  
+                        total: parts[1],  
+                        used: parts[2],  
+                        free: parts[3],  
+                        mount: parts[4]
+                    });
+                }
+            });
+        }
+        return partitions;
+    } catch (error) {
+        console.error("❌ Error fetching drive partitions:", error);
+        return [];
+    }
+};
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
     try {
         console.log(`📡 Fetching system stats from: ${API_URL}`);
+        const response = await axios.get(API_URL, {
+            auth: { username: "admin", password: "newPassword" }
+        });
 
-        // Fetch without authentication
-        const response = await axios.get(API_URL);
         if (!response.data || !response.data.Children) {
             throw new Error("Invalid response format from Libre Hardware Monitor.");
         }
 
         const systemData = response.data.Children[0];
 
-        // Initialize data storage
+        // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
         const ram = { load: "N/A", used: "N/A", available: "N/A" };
         const gpu = { fan_rpm: [], load: [], clock: [], memory: {}, temp: [] };
-        const drives = [];
+        const drives = getDrivePartitions();
         const network = { sent: "N/A", received: "N/A", uploaded: "N/A", downloaded: "N/A", utilization: "N/A" };
 
-        // Traverse system data
-        if (systemData.Children) {
-            systemData.Children.forEach((component) => {
-                if (component.Text.includes("Gigabyte")) {
-                    const mbChip = component.Children[0]; 
-                    if (mbChip && mbChip.Children) {
-                        mbChip.Children.forEach(sensorGroup => {
-                            if (sensorGroup.Text === "Voltages") motherboard.voltages.push(sensorGroup);
-                            if (sensorGroup.Text === "Temperatures") motherboard.temps.push(sensorGroup);
-                            if (sensorGroup.Text === "Fans") motherboard.fans.push(sensorGroup);
+        // ✅ Traverse System Data
+        systemData.Children.forEach((component) => {
+            if (component.Text.includes("Gigabyte")) {
+                const mbChip = component.Children[0];
+                if (mbChip && mbChip.Children) {
+                    mbChip.Children.forEach(sensorGroup => {
+                        if (sensorGroup.Text === "Voltages") extractSensorData(sensorGroup, "Voltage", motherboard.voltages);
+                        if (sensorGroup.Text === "Temperatures") extractSensorData(sensorGroup, "Temperature", motherboard.temps);
+                        if (sensorGroup.Text === "Fans") extractSensorData(sensorGroup, "Fan", motherboard.fans);
+                    });
+                }
+            }
+
+            if (component.Text.includes("Intel Core")) {
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Voltages") extractSensorData(sensorGroup, "Voltage", cpu.voltage);
+                    if (sensorGroup.Text === "Temperatures") extractSensorData(sensorGroup, "Temperature", cpu.temp);
+                    if (sensorGroup.Text === "Load") extractSensorData(sensorGroup, "Load", cpu.load);
+                    if (sensorGroup.Text === "Fans") extractSensorData(sensorGroup, "Fan", cpu.fan_rpm);
+                    if (sensorGroup.Text === "Clocks") extractSensorData(sensorGroup, "Clock", cpu.clock);
+                    if (sensorGroup.Text === "Powers") extractSensorData(sensorGroup, "Power", cpu.power);
+                });
+            }
+
+            if (component.Text.includes("Memory")) {
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Load") {
+                        ram.load = sensorGroup.Children[0]?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Data") {
+                        ram.used = sensorGroup.Children.find(item => item.Text === "Memory Used")?.Value || "N/A";
+                        ram.available = sensorGroup.Children.find(item => item.Text === "Memory Available")?.Value || "N/A";
+                    }
+                });
+            }
+
+            if (component.Text.includes("WD Blue")) {
+                let driveData = {
+                    name: "WD Blue SN580",
+                    used: "N/A",
+                    partitions: getDrivePartitions(),
+                    temperature: "N/A",
+                    read_speed: "N/A",
+                    write_speed: "N/A"
+                };
+
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Load") {
+                        driveData.used = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Temperatures") {
+                        driveData.temperature = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Throughput") {
+                        driveData.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
+                        driveData.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
+                    }
+                });
+                drives.push(driveData);
+            }
+
+            if (component.Text === "Ethernet") {
+                component.Children.forEach(sensorGroup => {
+                    if (sensorGroup.Text === "Load") {
+                        network.utilization = sensorGroup.Children.find(item => item.Text === "Network Utilization")?.Value || "N/A";
+                    }
+                    if (sensorGroup.Text === "Data") {
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
+                            if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
                         });
                     }
-                }
+                });
+            }
+        });
 
-                if (component.Text.includes("Intel Core")) {
-                    component.Children.forEach(sensorGroup => {
-                        if (sensorGroup.Text === "Voltages") cpu.voltage.push(sensorGroup);
-                        if (sensorGroup.Text === "Temperatures") cpu.temp.push(sensorGroup);
-                        if (sensorGroup.Text === "Load") cpu.load.push(sensorGroup);
-                        if (sensorGroup.Text === "Fans") cpu.fan_rpm.push(sensorGroup);
-                        if (sensorGroup.Text === "Clocks") cpu.clock.push(sensorGroup);
-                        if (sensorGroup.Text === "Powers") cpu.power.push(sensorGroup);
-                    });
-                }
-
-                if (component.Text.includes("Memory")) {
-                    component.Children.forEach(sensorGroup => {
-                        if (sensorGroup.Text === "Load") {
-                            ram.load = sensorGroup.Children[0]?.Value || "N/A";
-                        }
-                        if (sensorGroup.Text === "Data") {
-                            ram.used = sensorGroup.Children.find(item => item.Text === "Memory Used")?.Value || "N/A";
-                            ram.available = sensorGroup.Children.find(item => item.Text === "Memory Available")?.Value || "N/A";
-                        }
-                    });
-                }
-
-                if (component.Text.includes("NVIDIA GeForce")) {
-                    component.Children.forEach(sensorGroup => {
-                        if (sensorGroup.Text === "Clocks") gpu.clock.push(sensorGroup);
-                        if (sensorGroup.Text === "Temperatures") gpu.temp.push(sensorGroup);
-                        if (sensorGroup.Text === "Load") gpu.load.push(sensorGroup);
-                        if (sensorGroup.Text === "Fans") gpu.fan_rpm.push(sensorGroup);
-                        if (sensorGroup.Text === "Data") {
-                            sensorGroup.Children.forEach(memSensor => {
-                                gpu.memory[memSensor.Text] = memSensor.Value;
-                            });
-                        }
-                    });
-                }
-            });
-        }
-
-        return {
-            hostname: systemData.Text,
-            os: os.platform(),
-            uptime: os.uptime(),
-            cpu,
-            motherboard,
-            ram,
-            gpu,
-            drives,
-            network
-        };
+        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), cpu, motherboard, ram, gpu, drives, network };
     } catch (error) {
-        console.error("Failed to fetch system stats:", error.message);
+        console.error("⚠️ Failed to fetch system stats:", error.message);
         return null;
     }
 };
