@@ -172,7 +172,7 @@ const fetchSystemStats = async () => {
                 });
             }
 
-           if (component.Text === "Ethernet") {
+           if (component.Text.includes("Ethernet")) {
                 console.log("📡 Found Ethernet Component:", component);
             
                 component.Children.forEach(sensorGroup => {
