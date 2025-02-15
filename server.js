@@ -196,7 +196,7 @@ const fetchSystemStats = async () => {
                     }
             
                     if (sensorGroup.Text === "Throughput") {
-                        network.sent = sensorGroup.Children.find(item => item.Text === "Upload Speed"")?.Value || "N/A";
+                        network.sent = sensorGroup.Children.find(item => item.Text === "Upload Speed")?.Value || "N/A";
                         network.received = sensorGroup.Children.find(item => item.Text === "Download Speed")?.Value || "N/A";
                     }
                 });
