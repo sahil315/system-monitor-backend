@@ -172,7 +172,7 @@ const fetchSystemStats = async () => {
                 });
             }
 
-           if (component.Text === "Ethernet") {
+           if (component.id === 188) {
                     component.Children.forEach(sensorGroup => {
                         if (sensorGroup.Text === "Load") {
                             const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
