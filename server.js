@@ -33,20 +33,17 @@ const wss = new WebSocket.Server({ server });
 const API_URL = "https://libre.pcstats.site/data.json";
 
 // ✅ Extract Sensor Data
-const extractSensorData = (node, type, output, keyMap = null) => {
+const extractSensorData = (node, type, output, keyMap) => {
     if (!node.Children) return;
-    
+
     node.Children.forEach(sensor => {
-        if (sensor.Type === type) {
-            if (keyMap && keyMap[sensor.Text]) {
-                output[keyMap[sensor.Text]] = sensor.Value || "N/A";
-            } else {
-                output.push({ name: sensor.Text, value: sensor.Value });
-            }
+        if (sensor.Type === type && keyMap[sensor.Text]) {
+            output[keyMap[sensor.Text]] = sensor.Value || "N/A";
         }
         extractSensorData(sensor, type, output, keyMap);
     });
 };
+
 
 // ✅ Cross-Platform Drive Partitions Fetcher
 const getDrivePartitions = () => {
@@ -200,22 +197,23 @@ const fetchSystemStats = async () => {
                 console.log("✅ Extracted Network Stats:", network);
             }
 
+
                 
-                // Modify this part in fetchSystemStats()
-               if (component.Text.includes("WD Blue")) {
-                component.Children.forEach(sensorGroup => {
-                    if (sensorGroup.Text === "Load") {
-                        wdBlueDrive.used = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
-                    }
-                    if (sensorGroup.Text === "Temperatures") {
-                        wdBlueDrive.temperature = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
-                    }
-                    if (sensorGroup.Text === "Throughput") {
-                        wdBlueDrive.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
-                        wdBlueDrive.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
-                    }
-                });
-            }
+            // Modify this part in fetchSystemStats()
+           if (component.Text.includes("WD Blue")) {
+            component.Children.forEach(sensorGroup => {
+                if (sensorGroup.Text === "Load") {
+                    wdBlueDrive.used = sensorGroup.Children.find(item => item.Text === "Used Space")?.Value || "N/A";
+                }
+                if (sensorGroup.Text === "Temperatures") {
+                    wdBlueDrive.temperature = sensorGroup.Children.find(item => item.Text === "Temperature")?.Value || "N/A";
+                }
+                if (sensorGroup.Text === "Throughput") {
+                    wdBlueDrive.read_speed = sensorGroup.Children.find(item => item.Text === "Read Rate")?.Value || "N/A";
+                    wdBlueDrive.write_speed = sensorGroup.Children.find(item => item.Text === "Write Rate")?.Value || "N/A";
+                }
+            });
+        }
         // ✅ Keep only WD Blue in `drives` array
         drives.push(wdBlueDrive);
 
