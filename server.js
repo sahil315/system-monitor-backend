@@ -177,30 +177,27 @@ const fetchSystemStats = async () => {
             
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
-                        const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
-                        if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
+                        network.utilization = sensorGroup.Children[0]?.Value || "N/A";
+                        // const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
+                        // if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
                     }
             
                     if (sensorGroup.Text === "Data") {
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Data Uploaded")) {
-                                network.uploaded = sensor.Value || "N/A";
-                            }
-                            if (sensor.Text.includes("Data Downloaded")) {
-                                network.downloaded = sensor.Value || "N/A";
-                            }
-                        });
+                        // sensorGroup.Children.forEach(sensor => {
+                        //     if (sensor.Text.includes("Data Uploaded")) {
+                        //         network.uploaded = sensor.Value || "N/A";
+                        //     }
+                        //     if (sensor.Text.includes("Data Downloaded")) {
+                        //         network.downloaded = sensor.Value || "N/A";
+                        //     }
+                        // });
+                        network.uploaded = sensorGroup.Children.find(item => item.Text === "Data Uploaded")?.Value || "N/A";
+                        network.downloaded = sensorGroup.Children.find(item => item.Text === "Data Downloaded")?.Value || "N/A";
                     }
             
                     if (sensorGroup.Text === "Throughput") {
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Upload Speed")) {
-                                network.sent = sensor.Value || "N/A";
-                            }
-                            if (sensor.Text.includes("Download Speed")) {
-                                network.received = sensor.Value || "N/A";
-                            }
-                        });
+                        network.sent = sensorGroup.Children.find(item => item.Text === "Upload Speed"")?.Value || "N/A";
+                        network.received = sensorGroup.Children.find(item => item.Text === "Download Speed")?.Value || "N/A";
                     }
                 });
             
