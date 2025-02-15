@@ -97,7 +97,7 @@ const getDrivePartitions = () => {
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
     try {
-        console.log(`📡 Fetching system stats from: ${API_URL}`);
+        // console.log(`📡 Fetching system stats from: ${API_URL}`);
         const response = await axios.get(API_URL, {
             auth: { username: "admin", password: "newPassword" }
         });
@@ -171,7 +171,13 @@ const fetchSystemStats = async () => {
                     }
                 });
             }
+if (component.Text.includes("Ethernet")) {
+    console.log("📡 Found Ethernet Component:", JSON.stringify(component, null, 2));
 
+    component.Children.forEach(sensorGroup => {
+        console.log("🔍 Found Sensor Group:", sensorGroup.Text);
+    });
+}
            if (component.id === 188) {
                     component.Children.forEach(sensorGroup => {
                         if (sensorGroup.Text === "Load") {
