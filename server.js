@@ -112,7 +112,15 @@ const fetchSystemStats = async () => {
         // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
-        const ram = { load: "N/A", used: "N/A", available: "N/A" };
+        // const ram = { load: "N/A", used: "N/A", available: "N/A" };
+        const ram = { 
+            load: "N/A", 
+            virtual_load: "N/A", 
+            used: "N/A", 
+            available: "N/A", 
+            virtual_used: "N/A", 
+            virtual_available: "N/A" 
+        };
         const gpu = { fan_rpm: [], load: [], clock: [], memory: {}, temp: [] };
        
         const network = { sent: "N/A", received: "N/A", uploaded: "N/A", downloaded: "N/A", utilization: "N/A" };
@@ -161,45 +169,59 @@ const fetchSystemStats = async () => {
                     }
                 });
             }
+            // if (component.Text.includes("Memory")) {
+            //     component.Children.forEach(sensorGroup => {
+            //         if (sensorGroup.Text === "Load") {
+            //             ram.load = sensorGroup.Children[0]?.Value || "N/A";
+            //         }
+            //         if (sensorGroup.Text === "Data") {
+            //             ram.used = sensorGroup.Children.find(item => item.Text === "Memory Used")?.Value || "N/A";
+            //             ram.available = sensorGroup.Children.find(item => item.Text === "Memory Available")?.Value || "N/A";
+            //         }
+            //     });
+            // }
             if (component.Text.includes("Memory")) {
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
-                        ram.load = sensorGroup.Children[0]?.Value || "N/A";
+                        ram.load = sensorGroup.Children.find(item => item.Text === "Memory")?.Value || "N/A";
+                        ram.virtual_load = sensorGroup.Children.find(item => item.Text === "Virtual Memory")?.Value || "N/A";
                     }
                     if (sensorGroup.Text === "Data") {
                         ram.used = sensorGroup.Children.find(item => item.Text === "Memory Used")?.Value || "N/A";
                         ram.available = sensorGroup.Children.find(item => item.Text === "Memory Available")?.Value || "N/A";
+                        ram.virtual_used = sensorGroup.Children.find(item => item.Text === "Virtual Memory Used")?.Value || "N/A";
+                        ram.virtual_available = sensorGroup.Children.find(item => item.Text === "Virtual Memory Available")?.Value || "N/A";
                     }
                 });
             }
-if (component.Text.includes("Ethernet")) {
-    console.log("📡 Found Ethernet Component:", JSON.stringify(component, null, 2));
-
-    component.Children.forEach(sensorGroup => {
-        console.log("🔍 Found Sensor Group:", sensorGroup.Text);
-    });
-}
-           if (component.id === 188) {
-                    component.Children.forEach(sensorGroup => {
-                        if (sensorGroup.Text === "Load") {
-                            const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
-                            if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
-                        }
-                        if (sensorGroup.Text === "Data") {
-                            console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
-                            sensorGroup.Children.forEach(sensor => {
-                                if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
-                                if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
-                            });
-                        }
-                        if (sensorGroup.Text === "Throughput") {
-                            sensorGroup.Children.forEach(sensor => {
-                                if (sensor.Text.includes("Upload Speed")) network.sent = sensor.Value || "N/A";
-                                if (sensor.Text.includes("Download Speed")) network.received = sensor.Value || "N/A";
-                            });
-                        }
-                    });
-                }
+            if (component.Text.includes("Ethernet")) {
+                console.log("📡 Found Ethernet Component:", JSON.stringify(component, null, 2));
+            
+                component.Children.forEach(sensorGroup => {
+                    console.log("🔍 Found Sensor Group:", sensorGroup.Text);
+                });
+            }
+               if (component.id === 188) {
+                        component.Children.forEach(sensorGroup => {
+                            if (sensorGroup.Text === "Load") {
+                                const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
+                                if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
+                            }
+                            if (sensorGroup.Text === "Data") {
+                                console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
+                                sensorGroup.Children.forEach(sensor => {
+                                    if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
+                                    if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
+                                });
+                            }
+                            if (sensorGroup.Text === "Throughput") {
+                                sensorGroup.Children.forEach(sensor => {
+                                    if (sensor.Text.includes("Upload Speed")) network.sent = sensor.Value || "N/A";
+                                    if (sensor.Text.includes("Download Speed")) network.received = sensor.Value || "N/A";
+                                });
+                            }
+                        });
+                    }
 
 
                 
