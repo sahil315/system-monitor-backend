@@ -198,6 +198,12 @@ const fetchSystemStats = async () => {
                             if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
                         });
                     }
+                    if (sensorGroup.Text === "Throughput") {
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Upload Speed")) network.sent = sensor.Value || "N/A";
+                            if (sensor.Text.includes("Download Speed")) network.received = sensor.Value || "N/A";
+                        });
+                    }
                 });
             }
         });
