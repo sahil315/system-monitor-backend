@@ -33,15 +33,21 @@ const wss = new WebSocket.Server({ server });
 const API_URL = "https://libre.pcstats.site/data.json";
 
 // ✅ Extract Sensor Data
-const extractSensorData = (node, type, output) => {
+const extractSensorData = (node, type, output, keyMap = null) => {
     if (!node.Children) return;
+    
     node.Children.forEach(sensor => {
         if (sensor.Type === type) {
-            output.push({ name: sensor.Text, value: sensor.Value });
+            if (keyMap && keyMap[sensor.Text]) {
+                output[keyMap[sensor.Text]] = sensor.Value || "N/A";
+            } else {
+                output.push({ name: sensor.Text, value: sensor.Value });
+            }
         }
-        extractSensorData(sensor, type, output);
+        extractSensorData(sensor, type, output, keyMap);
     });
 };
+
 // ✅ Cross-Platform Drive Partitions Fetcher
 const getDrivePartitions = () => {
     try {
@@ -166,46 +172,32 @@ const fetchSystemStats = async () => {
                 });
             }
 
-            if (component.Text === "Ethernet") {
+           if (component.Text === "Ethernet") {
                 console.log("📡 Found Ethernet Component:", component);
             
                 component.Children.forEach(sensorGroup => {
-                    console.log(`🔍 Checking: ${sensorGroup.Text}`);
-            
                     if (sensorGroup.Text === "Load") {
-                        const util = sensorGroup.Children.find(item => item.Text === "Network Utilization");
-                        network.utilization = util ? util.Value : "N/A";
-                        console.log("📊 Network Utilization:", network.utilization);
+                        extractSensorData(sensorGroup, "Load", network, {
+                            "Network Utilization": "utilization"
+                        });
                     }
             
                     if (sensorGroup.Text === "Data") {
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Data Uploaded")) {
-                                network.uploaded = sensor.Value || "N/A";
-                                console.log("⬆️ Data Uploaded:", network.uploaded);
-                            }
-                            if (sensor.Text.includes("Data Downloaded")) {
-                                network.downloaded = sensor.Value || "N/A";
-                                console.log("⬇️ Data Downloaded:", network.downloaded);
-                            }
+                        extractSensorData(sensorGroup, "Data", network, {
+                            "Data Uploaded": "uploaded",
+                            "Data Downloaded": "downloaded"
                         });
                     }
             
                     if (sensorGroup.Text === "Throughput") {
-                        console.log("🚀 Found Throughput Component:", sensorGroup);
-            
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Upload Speed")) {
-                                network.sent = sensor.Value || "N/A";
-                                console.log("📤 Upload Speed:", network.sent);
-                            }
-                            if (sensor.Text.includes("Download Speed")) {
-                                network.received = sensor.Value || "N/A";
-                                console.log("📥 Download Speed:", network.received);
-                            }
+                        extractSensorData(sensorGroup, "Throughput", network, {
+                            "Upload Speed": "sent",
+                            "Download Speed": "received"
                         });
                     }
                 });
+            
+                console.log("✅ Extracted Network Stats:", network);
             }
 
                 
