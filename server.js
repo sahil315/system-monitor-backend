@@ -107,6 +107,7 @@ const fetchSystemStats = async () => {
         }
 
         const systemData = response.data.Children[0];
+        console.log('systemData   -----', JSON.stringify(systemData));
 
         // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
