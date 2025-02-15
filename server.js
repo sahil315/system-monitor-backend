@@ -177,32 +177,40 @@ const fetchSystemStats = async () => {
             
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
-                        network.utilization = sensorGroup.Children[0]?.Value || "N/A";
-                        // const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
-                        // if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
+                        const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
+                        if (utilizationSensor) {
+                            network.utilization = utilizationSensor.Value || "N/A";
+                        }
                     }
             
                     if (sensorGroup.Text === "Data") {
-                        // sensorGroup.Children.forEach(sensor => {
-                        //     if (sensor.Text.includes("Data Uploaded")) {
-                        //         network.uploaded = sensor.Value || "N/A";
-                        //     }
-                        //     if (sensor.Text.includes("Data Downloaded")) {
-                        //         network.downloaded = sensor.Value || "N/A";
-                        //     }
-                        // });
-                        network.uploaded = sensorGroup.Children.find(item => item.Text === "Data Uploaded")?.Value || "N/A";
-                        network.downloaded = sensorGroup.Children.find(item => item.Text === "Data Downloaded")?.Value || "N/A";
+                        const uploadedSensor = sensorGroup.Children.find(item => item.Text === "Data Uploaded");
+                        const downloadedSensor = sensorGroup.Children.find(item => item.Text === "Data Downloaded");
+            
+                        if (uploadedSensor) {
+                            network.uploaded = uploadedSensor.Value || "N/A";
+                        }
+                        if (downloadedSensor) {
+                            network.downloaded = downloadedSensor.Value || "N/A";
+                        }
                     }
             
                     if (sensorGroup.Text === "Throughput") {
-                        network.sent = sensorGroup.Children.find(item => item.Text === "Upload Speed")?.Value || "N/A";
-                        network.received = sensorGroup.Children.find(item => item.Text === "Download Speed")?.Value || "N/A";
+                        const uploadSpeedSensor = sensorGroup.Children.find(item => item.Text === "Upload Speed");
+                        const downloadSpeedSensor = sensorGroup.Children.find(item => item.Text === "Download Speed");
+            
+                        if (uploadSpeedSensor) {
+                            network.sent = uploadSpeedSensor.Value || "N/A";
+                        }
+                        if (downloadSpeedSensor) {
+                            network.received = downloadSpeedSensor.Value || "N/A";
+                        }
                     }
                 });
             
                 console.log("✅ Extracted Network Stats:", network);
             }
+
 
                 
                 // Modify this part in fetchSystemStats()
