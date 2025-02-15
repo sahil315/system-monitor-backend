@@ -177,22 +177,29 @@ const fetchSystemStats = async () => {
             
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
-                        extractSensorData(sensorGroup, "Load", network, {
-                            "Network Utilization": "utilization"
-                        });
+                        const utilizationSensor = sensorGroup.Children.find(item => item.Text === "Network Utilization");
+                        if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
                     }
             
                     if (sensorGroup.Text === "Data") {
-                        extractSensorData(sensorGroup, "Data", network, {
-                            "Data Uploaded": "uploaded",
-                            "Data Downloaded": "downloaded"
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Data Uploaded")) {
+                                network.uploaded = sensor.Value || "N/A";
+                            }
+                            if (sensor.Text.includes("Data Downloaded")) {
+                                network.downloaded = sensor.Value || "N/A";
+                            }
                         });
                     }
             
                     if (sensorGroup.Text === "Throughput") {
-                        extractSensorData(sensorGroup, "Throughput", network, {
-                            "Upload Speed": "sent",
-                            "Download Speed": "received"
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Upload Speed")) {
+                                network.sent = sensor.Value || "N/A";
+                            }
+                            if (sensor.Text.includes("Download Speed")) {
+                                network.received = sensor.Value || "N/A";
+                            }
                         });
                     }
                 });
