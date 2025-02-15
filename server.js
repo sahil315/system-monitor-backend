@@ -230,7 +230,7 @@ const fetchSystemStats = async () => {
            
         });
 
-        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), cpu, motherboard, ram, gpu, drives, network };
+        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives };
     } catch (error) {
         console.error("⚠️ Failed to fetch system stats:", error.message);
         return null;
