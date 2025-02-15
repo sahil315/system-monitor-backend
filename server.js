@@ -166,7 +166,48 @@ const fetchSystemStats = async () => {
                 });
             }
 
-           
+            if (component.Text === "Ethernet") {
+                console.log("📡 Found Ethernet Component:", component);
+            
+                component.Children.forEach(sensorGroup => {
+                    console.log(`🔍 Checking: ${sensorGroup.Text}`);
+            
+                    if (sensorGroup.Text === "Load") {
+                        const util = sensorGroup.Children.find(item => item.Text === "Network Utilization");
+                        network.utilization = util ? util.Value : "N/A";
+                        console.log("📊 Network Utilization:", network.utilization);
+                    }
+            
+                    if (sensorGroup.Text === "Data") {
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Data Uploaded")) {
+                                network.uploaded = sensor.Value || "N/A";
+                                console.log("⬆️ Data Uploaded:", network.uploaded);
+                            }
+                            if (sensor.Text.includes("Data Downloaded")) {
+                                network.downloaded = sensor.Value || "N/A";
+                                console.log("⬇️ Data Downloaded:", network.downloaded);
+                            }
+                        });
+                    }
+            
+                    if (sensorGroup.Text === "Throughput") {
+                        console.log("🚀 Found Throughput Component:", sensorGroup);
+            
+                        sensorGroup.Children.forEach(sensor => {
+                            if (sensor.Text.includes("Upload Speed")) {
+                                network.sent = sensor.Value || "N/A";
+                                console.log("📤 Upload Speed:", network.sent);
+                            }
+                            if (sensor.Text.includes("Download Speed")) {
+                                network.received = sensor.Value || "N/A";
+                                console.log("📥 Download Speed:", network.received);
+                            }
+                        });
+                    }
+                });
+            }
+
                 
                 // Modify this part in fetchSystemStats()
                if (component.Text.includes("WD Blue")) {
@@ -187,25 +228,7 @@ const fetchSystemStats = async () => {
         drives.push(wdBlueDrive);
 
 
-            if (component.Text === "Ethernet") {
-                component.Children.forEach(sensorGroup => {
-                    if (sensorGroup.Text === "Load") {
-                        network.utilization = sensorGroup.Children.find(item => item.Text === "Network Utilization")?.Value || "N/A";
-                    }
-                    if (sensorGroup.Text === "Data") {
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
-                            if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
-                        });
-                    }
-                    if (sensorGroup.Text === "Throughput") {
-                        sensorGroup.Children.forEach(sensor => {
-                            if (sensor.Text.includes("Upload Speed")) network.sent = sensor.Value || "N/A";
-                            if (sensor.Text.includes("Download Speed")) network.received = sensor.Value || "N/A";
-                        });
-                    }
-                });
-            }
+           
         });
 
         return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), cpu, motherboard, ram, gpu, drives, network };
