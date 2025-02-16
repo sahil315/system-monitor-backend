@@ -92,6 +92,7 @@ const fetchSystemStats = async () => {
         console.log('systemData   -----', JSON.stringify(response.data));
         // ✅ Fetch Storage Data (Drives are now stored separately)
         const partitions = getDriveUsage();
+        console.log('partitions' + JSON.stringify(partitions));
         // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
