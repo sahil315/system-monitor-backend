@@ -50,42 +50,43 @@ const extractSensorData = (node, type, output, keyMap = null) => {
 };
 
 // ✅ Cross-Platform Drive Partitions Fetcher
-const getDrivePartitions = () => {
-    return new Promise((resolve, reject) => {
-        const psCommand = `
-            Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name='Total'; Expression={[math]::Round($_.Used + $_.Free, 2)}}, @{Name='Free'; Expression={[math]::Round($_.Free, 2)}}
-        `;
+const getDriveUsage = () => {
+    try {
+        let drives = ["C:", "D:", "F:"];
+        let storageData = [];
 
-        exec(`powershell -Command "${psCommand}"`, (error, stdout) => {
-            if (error) {
-                console.error("❌ PowerShell Error:", error);
-                return reject("Failed to fetch drive partitions.");
-            }
+        drives.forEach(drive => {
+            try {
+                const output = execSync(`wmic logicaldisk where DeviceID='${drive}' get Size,FreeSpace /format:csv`).toString();
+                const lines = output.trim().split("\n");
 
-            const lines = stdout.trim().split("\n").slice(2); // Remove headers
-            const drives = ["C", "D", "F"]; // Only fetch these drives
-            const storageData = lines
-                .map(line => line.trim().split(/\s+/))
-                .filter(([drive]) => drives.includes(drive))
-                .map(([drive, total, free]) => {
+                if (lines.length > 1) {
+                    const [headers, values] = lines.slice(-2);
+                    const [, total, free] = values.split(",");
+
                     const totalGB = parseFloat(total) / 1e9 || 0; // Convert bytes to GB
                     const freeGB = parseFloat(free) / 1e9 || 0;
                     const usedGB = totalGB - freeGB;
 
-                    return {
-                        drive: `${drive}:`,
+                    storageData.push({
+                        drive: drive,
                         total: totalGB.toFixed(2),
                         free: freeGB.toFixed(2),
                         used: usedGB.toFixed(2),
                         percentUsed: totalGB > 0 ? ((usedGB / totalGB) * 100).toFixed(1) : "0",
-                    };
-                });
-
-            resolve(storageData);
+                    });
+                }
+            } catch (error) {
+                console.error(`❌ Error fetching data for drive ${drive}:`, error);
+            }
         });
-    });
-};
 
+        return storageData;
+    } catch (error) {
+        console.error("❌ Error fetching drive usage:", error);
+        return [];
+    }
+};
 
 
 
@@ -126,7 +127,7 @@ const fetchSystemStats = async () => {
                 temperature: "N/A",
                 read_speed: "N/A",
                 write_speed: "N/A",
-                partitions: getDrivePartitions()
+                partitions: getDriveUsage()
             };
         // ✅ Traverse System Data
         systemData.Children.forEach((component) => {
