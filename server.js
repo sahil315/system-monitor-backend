@@ -76,6 +76,7 @@ const getDriveUsage = () => {
 
 
 
+
 // ✅ Function to Fetch System Stats
 const fetchSystemStats = async () => {
     try {
@@ -108,15 +109,20 @@ const fetchSystemStats = async () => {
         const gpu = { fan_rpm: [], load: [], clock: [], memory: {}, temp: [] };
        
         const network = { sent: "N/A", received: "N/A", uploaded: "N/A", downloaded: "N/A", utilization: "N/A" };
-        const drives = [];
-            let wdBlueDrive = {
-                name: "WD Blue SN580 2TB",
-                used: "N/A",
-                temperature: "N/A",
-                read_speed: "N/A",
-                write_speed: "N/A",
-                // partitions: getDriveUsage()
-            };
+       let drives = [];
+
+        let wdBlueDrive = {
+            name: "WD Blue SN580 2TB",
+            used: "N/A",
+            temperature: "N/A",
+            read_speed: "N/A",
+            write_speed: "N/A"
+        };
+
+        // ✅ Store only one instance of `WD Blue SN580 2TB`
+        if (!drives.some(drive => drive.name === wdBlueDrive.name)) {
+            drives.push(wdBlueDrive);
+        }
         // ✅ Traverse System Data
         systemData.Children.forEach((component) => {
             if (component.Text.includes("Gigabyte")) {
@@ -225,13 +231,13 @@ const fetchSystemStats = async () => {
                 });
             }
         // ✅ Keep only WD Blue in `drives` array
-        drives.push(wdBlueDrive);
+        // drives.push(wdBlueDrive);
 
 
            
         });
 
-        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives, partitions};
+        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives, partitions };
     } catch (error) {
         console.error("⚠️ Failed to fetch system stats:", error.message);
         return null;
