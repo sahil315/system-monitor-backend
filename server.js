@@ -5,6 +5,7 @@ const cors = require("cors");
 const os = require("os");
 const { execSync } = require("child_process");
 require("dotenv").config(); // Load environment variables
+const { exec } = require("child_process");
 
 const app = express();
 
@@ -50,45 +51,39 @@ const extractSensorData = (node, type, output, keyMap = null) => {
 
 // ✅ Cross-Platform Drive Partitions Fetcher
 const getDrivePartitions = () => {
-    try {
-        let partitions = [];
-        const driveInfo = execSync("df -h --output=target,size,used,avail | tail -n +2").toString();
-        const lines = driveInfo.trim().split("\n");
+    return new Promise((resolve, reject) => {
+        const psCommand = `
+            Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name='Total'; Expression={[math]::Round($_.Used + $_.Free, 2)}}, @{Name='Free'; Expression={[math]::Round($_.Free, 2)}}
+        `;
 
-        lines.forEach(line => {
-            const parts = line.trim().split(/\s+/);
-            if (parts.length === 4) {
-                const mountPoint = parts[0]; // e.g. `/`, `/mnt/storage`
-                const totalSpace = parts[1];
-                const usedSpace = parts[2];
-                const freeSpace = parts[3];
-
-                // ✅ Keep only REAL storage devices
-                if (
-                    mountPoint !== "/" &&
-                    !mountPoint.includes("/dev") &&
-                    !mountPoint.includes("/tmp") &&
-                    !mountPoint.includes("/etc/secrets") &&
-                    !mountPoint.includes("/dev/shm") &&
-                    !mountPoint.includes("/opt/render-ssh") &&
-                    !mountPoint.includes("/proc") &&
-                    !mountPoint.includes("/sys")
-                ) {
-                    partitions.push({
-                        name: mountPoint, // Keep relevant names
-                        total: totalSpace,
-                        used: usedSpace,
-                        free: freeSpace
-                    });
-                }
+        exec(`powershell -Command "${psCommand}"`, (error, stdout) => {
+            if (error) {
+                console.error("❌ PowerShell Error:", error);
+                return reject("Failed to fetch drive partitions.");
             }
-        });
 
-        return partitions;
-    } catch (error) {
-        console.error("❌ Error fetching drive partitions:", error);
-        return [];
-    }
+            const lines = stdout.trim().split("\n").slice(2); // Remove headers
+            const drives = ["C", "D", "F"]; // Only fetch these drives
+            const storageData = lines
+                .map(line => line.trim().split(/\s+/))
+                .filter(([drive]) => drives.includes(drive))
+                .map(([drive, total, free]) => {
+                    const totalGB = parseFloat(total) / 1e9 || 0; // Convert bytes to GB
+                    const freeGB = parseFloat(free) / 1e9 || 0;
+                    const usedGB = totalGB - freeGB;
+
+                    return {
+                        drive: `${drive}:`,
+                        total: totalGB.toFixed(2),
+                        free: freeGB.toFixed(2),
+                        used: usedGB.toFixed(2),
+                        percentUsed: totalGB > 0 ? ((usedGB / totalGB) * 100).toFixed(1) : "0",
+                    };
+                });
+
+            resolve(storageData);
+        });
+    });
 };
 
 
