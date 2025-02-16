@@ -3,9 +3,9 @@ const WebSocket = require("ws");
 const axios = require("axios");
 const cors = require("cors");
 const os = require("os");
-const { execSync } = require("child_process");
 require("dotenv").config(); // Load environment variables
-const { exec } = require("child_process");
+const diskusage = require("diskusage"); // ✅ Using diskusage
+
 
 const app = express();
 
@@ -49,43 +49,29 @@ const extractSensorData = (node, type, output, keyMap = null) => {
     });
 };
 
-// ✅ Cross-Platform Drive Partitions Fetcher
+// ✅ Fetch Storage Data Using diskusage
 const getDriveUsage = () => {
-    try {
-        let drives = ["C:", "D:", "F:"];
-        let storageData = [];
+    let partitions = [];
+    let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
 
-        drives.forEach(drive => {
-            try {
-                const output = execSync(`wmic logicaldisk where DeviceID='${drive}' get Size,FreeSpace /format:csv`).toString();
-                const lines = output.trim().split("\n");
+    drives.forEach(drive => {
+        try {
+            const { free, total } = diskusage.checkSync(drive);
+            const used = total - free;
 
-                if (lines.length > 1) {
-                    const [headers, values] = lines.slice(-2);
-                    const [, total, free] = values.split(",");
+            partitions.push({
+                name: drive,
+                total: (total / 1e9).toFixed(2) + " GB",
+                free: (free / 1e9).toFixed(2) + " GB",
+                used: (used / 1e9).toFixed(2) + " GB",
+                percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
+            });
+        } catch (error) {
+            console.error(`❌ Error fetching data for ${drive}:`, error.message);
+        }
+    });
 
-                    const totalGB = parseFloat(total) / 1e9 || 0; // Convert bytes to GB
-                    const freeGB = parseFloat(free) / 1e9 || 0;
-                    const usedGB = totalGB - freeGB;
-
-                    storageData.push({
-                        drive: drive,
-                        total: totalGB.toFixed(2),
-                        free: freeGB.toFixed(2),
-                        used: usedGB.toFixed(2),
-                        percentUsed: totalGB > 0 ? ((usedGB / totalGB) * 100).toFixed(1) : "0",
-                    });
-                }
-            } catch (error) {
-                console.error(`❌ Error fetching data for drive ${drive}:`, error);
-            }
-        });
-
-        return storageData;
-    } catch (error) {
-        console.error("❌ Error fetching drive usage:", error);
-        return [];
-    }
+    return partitions;
 };
 
 
@@ -104,7 +90,8 @@ const fetchSystemStats = async () => {
 
         const systemData = response.data.Children[0];
         console.log('systemData   -----', JSON.stringify(response.data));
-
+        // ✅ Fetch Storage Data (Drives are now stored separately)
+        const partitions = getDriveUsage();
         // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
@@ -127,7 +114,7 @@ const fetchSystemStats = async () => {
                 temperature: "N/A",
                 read_speed: "N/A",
                 write_speed: "N/A",
-                partitions: getDriveUsage()
+                // partitions: getDriveUsage()
             };
         // ✅ Traverse System Data
         systemData.Children.forEach((component) => {
@@ -243,7 +230,7 @@ const fetchSystemStats = async () => {
            
         });
 
-        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives };
+        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives, partitions};
     } catch (error) {
         console.error("⚠️ Failed to fetch system stats:", error.message);
         return null;
