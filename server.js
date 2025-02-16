@@ -50,29 +50,29 @@ const extractSensorData = (node, type, output, keyMap = null) => {
 };
 
 // ✅ Fetch Storage Data Using diskusage
-const getDriveUsage = () => {
-    let partitions = [];
-    let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
+// const getDriveUsage = () => {
+//     let partitions = [];
+//     let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
 
-    drives.forEach(drive => {
-        try {
-            const { free, total } = diskusage.checkSync(drive);
-            const used = total - free;
+//     drives.forEach(drive => {
+//         try {
+//             const { free, total } = diskusage.checkSync(drive);
+//             const used = total - free;
 
-            partitions.push({
-                name: drive,
-                total: (total / 1e9).toFixed(2) + " GB",
-                free: (free / 1e9).toFixed(2) + " GB",
-                used: (used / 1e9).toFixed(2) + " GB",
-                percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
-            });
-        } catch (error) {
-            console.error(`❌ Error fetching data for ${drive}:`, error.message);
-        }
-    });
+//             partitions.push({
+//                 name: drive,
+//                 total: (total / 1e9).toFixed(2) + " GB",
+//                 free: (free / 1e9).toFixed(2) + " GB",
+//                 used: (used / 1e9).toFixed(2) + " GB",
+//                 percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
+//             });
+//         } catch (error) {
+//             console.error(`❌ Error fetching data for ${drive}:`, error.message);
+//         }
+//     });
 
-    return partitions;
-};
+//     return partitions;
+// };
 
 
 
@@ -91,7 +91,7 @@ const fetchSystemStats = async () => {
         const systemData = response.data.Children[0];
         console.log('systemData   -----', JSON.stringify(response.data));
         // ✅ Fetch Storage Data (Drives are now stored separately)
-        const partitions = getDriveUsage();
+        // const partitions = getDriveUsage();
         // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
