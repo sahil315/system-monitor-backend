@@ -48,50 +48,36 @@ const extractSensorData = (node, type, output, keyMap = null) => {
     });
 };
 
-// ✅ Cross-Platform Drive Partitions Fetcher
+// ✅ Fetch Drive Partitions (Windows using PowerShell)
 const getDrivePartitions = () => {
-    try {
-        let partitions = [];
-        const driveInfo = execSync("df -h --output=target,size,used,avail | tail -n +2").toString();
-        const lines = driveInfo.trim().split("\n");
+    return new Promise((resolve, reject) => {
+        const psCommand = `
+            Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{Name='Total'; Expression={[math]::Round($_.Used + $_.Free, 2)}}, @{Name='Free'; Expression={[math]::Round($_.Free, 2)}}
+        `;
 
-        lines.forEach(line => {
-            const parts = line.trim().split(/\s+/);
-            if (parts.length === 4) {
-                const mountPoint = parts[0]; // e.g. `/`, `/mnt/storage`
-                const totalSpace = parts[1];
-                const usedSpace = parts[2];
-                const freeSpace = parts[3];
-
-                // ✅ Keep only REAL storage devices
-                if (
-                    mountPoint !== "/" &&
-                    !mountPoint.includes("/dev") &&
-                    !mountPoint.includes("/tmp") &&
-                    !mountPoint.includes("/etc/secrets") &&
-                    !mountPoint.includes("/dev/shm") &&
-                    !mountPoint.includes("/opt/render-ssh") &&
-                    !mountPoint.includes("/proc") &&
-                    !mountPoint.includes("/sys")
-                ) {
-                    partitions.push({
-                        name: mountPoint, // Keep relevant names
-                        total: totalSpace,
-                        used: usedSpace,
-                        free: freeSpace
-                    });
-                }
+        exec(`powershell -Command "${psCommand}"`, (error, stdout) => {
+            if (error) {
+                console.error("❌ PowerShell Error:", error);
+                return reject("Failed to fetch drive partitions.");
             }
+
+            const lines = stdout.trim().split("\n").slice(2); // Remove headers
+            const drives = ["C", "D", "F"]; // Only fetch these drives
+            const storageData = lines
+                .map(line => line.trim().split(/\s+/))
+                .filter(([drive]) => drives.includes(drive))
+                .map(([drive, total, free]) => ({
+                    drive: `${drive}:`,
+                    total: parseFloat(total / 1e9).toFixed(2), // Convert bytes to GB
+                    free: parseFloat(free / 1e9).toFixed(2),
+                    used: (parseFloat(total / 1e9) - parseFloat(free / 1e9)).toFixed(2),
+                    percentUsed: ((1 - free / total) * 100).toFixed(1),
+                }));
+
+            resolve(storageData);
         });
-
-        return partitions;
-    } catch (error) {
-        console.error("❌ Error fetching drive partitions:", error);
-        return [];
-    }
+    });
 };
-
-
 
 
 // ✅ Function to Fetch System Stats
@@ -126,13 +112,15 @@ const fetchSystemStats = async () => {
         const network = { sent: "N/A", received: "N/A", uploaded: "N/A", downloaded: "N/A", utilization: "N/A" };
         const drives = [];
             let wdBlueDrive = {
-                name: "WD Blue SN580 2TB",
-                used: "N/A",
-                temperature: "N/A",
-                read_speed: "N/A",
-                write_speed: "N/A",
-                partitions: getDrivePartitions()
-            };
+            name: "WD Blue SN580 2TB",
+            used: "N/A",
+            temperature: "N/A",
+            read_speed: "N/A",
+            write_speed: "N/A",
+            partitions: []
+        };
+         // ✅ Fetch Dynamic Storage Data
+        wdBlueDrive.partitions = await getDrivePartitions();
         // ✅ Traverse System Data
         systemData.Children.forEach((component) => {
             if (component.Text.includes("Gigabyte")) {
