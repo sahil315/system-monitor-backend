@@ -8,7 +8,6 @@ const diskusage = require("diskusage"); // ✅ Using diskusage
 
 
 const app = express();
-app.use(express.json()); // ✅ Parse JSON requests
 
 // ✅ Allow CORS
 app.use(cors({
@@ -322,19 +321,20 @@ app.get("/stats", async (req, res) => {
 });
 
 
-// ✅ API Endpoint to Receive Partition Data
-app.use(express.json()); // ✅ Parse JSON requests
-
-// ✅ Store received partition data
 app.post("/api/partitions", (req, res) => {
-    console.log("🔹 Received partition data:", req.body); // Debugging
     if (!req.body.partitions) {
         return res.status(400).json({ error: "No partition data received" });
     }
+
     storedPartitions = req.body.partitions;
-    res.json({ message: "✅ Partitions updated successfully" });
+    console.log("✅ Updated partitions:", storedPartitions);
+    res.json({ message: "Partitions updated successfully" });
 });
 
+// ✅ API Endpoint to Serve Partitions
+app.get("/api/partitions", (req, res) => {
+    res.json({ partitions: storedPartitions });
+});
 
 
 // ✅ Start the Server
