@@ -15,6 +15,7 @@ app.use(cors({
     allowedHeaders: ["x-api-key", "Content-Type", "Authorization"],
     exposedHeaders: ["x-api-key"]
 }));
+app.use(express.json()); // ✅ Required to parse JSON body
 
 // ✅ Middleware for API Key Authentication
 app.use((req, res, next) => {
@@ -29,6 +30,23 @@ app.use((req, res, next) => {
 });
 
 let storedPartitions = []; // ✅ Store partitions received from local machine
+
+app.post("/api/partitions", (req, res) => {
+    if (!req.body.partitions) {
+        return res.status(400).json({ error: "No partition data received" });
+    }
+
+    storedPartitions = req.body.partitions;
+    console.log("✅ Updated partitions:", storedPartitions);
+    res.json({ message: "Partitions updated successfully" });
+});
+
+// ✅ API Endpoint to Serve Partitions
+app.get("/api/partitions", (req, res) => {
+    res.json({ partitions: storedPartitions });
+});
+
+
 
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -51,32 +69,6 @@ const extractSensorData = (node, type, output, keyMap = null) => {
     });
 };
 
-// ✅ Fetch Storage Data Using diskusage
-// const getDriveUsage = () => {
-//     let partitions = [];
-//     let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
-
-//     drives.forEach(drive => {
-//         try {
-//             const { free, total } = diskusage.checkSync(drive);
-//             const used = total - free;
-
-//             partitions.push({
-//                 name: drive,
-//                 total: (total / 1e9).toFixed(2) + " GB",
-//                 free: (free / 1e9).toFixed(2) + " GB",
-//                 used: (used / 1e9).toFixed(2) + " GB",
-//                 percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
-//             });
-//         } catch (error) {
-//             console.error(`❌ Error fetching data for ${drive}:`, error.message);
-//         }
-//     });
-
-//     return partitions;
-// };
-
-
 
 
 // ✅ Function to Fetch System Stats
@@ -92,11 +84,6 @@ const fetchSystemStats = async () => {
         }
 
         const systemData = response.data.Children[0];
-        console.log('systemData   -----', JSON.stringify(response.data));
-        // ✅ Fetch Storage Data (Drives are now stored separately)
-        // // const partitions = getDriveUsage();
-        // console.log('partitions' + JSON.stringify(partitions));
-        // ✅ Initialize data storage
         const cpu = { voltage: [], temp: [], load: [], fan_rpm: [], clock: [], power: [] };
         const motherboard = { voltages: [], temps: [], fans: [] };
         // const ram = { load: "N/A", used: "N/A", available: "N/A" };
@@ -161,17 +148,7 @@ const fetchSystemStats = async () => {
                     }
                 });
             }
-            // if (component.Text.includes("Memory")) {
-            //     component.Children.forEach(sensorGroup => {
-            //         if (sensorGroup.Text === "Load") {
-            //             ram.load = sensorGroup.Children[0]?.Value || "N/A";
-            //         }
-            //         if (sensorGroup.Text === "Data") {
-            //             ram.used = sensorGroup.Children.find(item => item.Text === "Memory Used")?.Value || "N/A";
-            //             ram.available = sensorGroup.Children.find(item => item.Text === "Memory Available")?.Value || "N/A";
-            //         }
-            //     });
-            // }
+     
             if (component.Text.includes("Memory")) {
                 component.Children.forEach(sensorGroup => {
                     if (sensorGroup.Text === "Load") {
@@ -321,20 +298,6 @@ app.get("/stats", async (req, res) => {
 });
 
 
-app.post("/api/partitions", (req, res) => {
-    if (!req.body.partitions) {
-        return res.status(400).json({ error: "No partition data received" });
-    }
-
-    storedPartitions = req.body.partitions;
-    console.log("✅ Updated partitions:", storedPartitions);
-    res.json({ message: "Partitions updated successfully" });
-});
-
-// ✅ API Endpoint to Serve Partitions
-app.get("/api/partitions", (req, res) => {
-    res.json({ partitions: storedPartitions });
-});
 
 
 // ✅ Start the Server
