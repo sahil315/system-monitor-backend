@@ -28,6 +28,23 @@ app.use((req, res, next) => {
     next();
 });
 
+let storedPartitions = []; // ✅ Store partitions received from local machine
+
+// ✅ API Endpoint to Receive Partition Data
+app.post("/api/partitions", (req, res) => {
+    if (!req.body.partitions) {
+        return res.status(400).json({ error: "No partition data received" });
+    }
+
+    storedPartitions = req.body.partitions;
+    console.log("✅ Updated partitions:", storedPartitions);
+    res.json({ message: "Partitions updated successfully" });
+});
+
+// ✅ API Endpoint to Serve Partitions
+app.get("/api/partitions", (req, res) => {
+    res.json({ partitions: storedPartitions });
+});
 const server = require("http").createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -50,29 +67,29 @@ const extractSensorData = (node, type, output, keyMap = null) => {
 };
 
 // ✅ Fetch Storage Data Using diskusage
-const getDriveUsage = () => {
-    let partitions = [];
-    let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
+// const getDriveUsage = () => {
+//     let partitions = [];
+//     let drives = ["C:", "D:", "F:"]; // ✅ Fetch only these partitions
 
-    drives.forEach(drive => {
-        try {
-            const { free, total } = diskusage.checkSync(drive);
-            const used = total - free;
+//     drives.forEach(drive => {
+//         try {
+//             const { free, total } = diskusage.checkSync(drive);
+//             const used = total - free;
 
-            partitions.push({
-                name: drive,
-                total: (total / 1e9).toFixed(2) + " GB",
-                free: (free / 1e9).toFixed(2) + " GB",
-                used: (used / 1e9).toFixed(2) + " GB",
-                percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
-            });
-        } catch (error) {
-            console.error(`❌ Error fetching data for ${drive}:`, error.message);
-        }
-    });
+//             partitions.push({
+//                 name: drive,
+//                 total: (total / 1e9).toFixed(2) + " GB",
+//                 free: (free / 1e9).toFixed(2) + " GB",
+//                 used: (used / 1e9).toFixed(2) + " GB",
+//                 percentUsed: total > 0 ? ((used / total) * 100).toFixed(1) + "%" : "0%"
+//             });
+//         } catch (error) {
+//             console.error(`❌ Error fetching data for ${drive}:`, error.message);
+//         }
+//     });
 
-    return partitions;
-};
+//     return partitions;
+// };
 
 
 
@@ -237,7 +254,7 @@ const fetchSystemStats = async () => {
            
         });
 
-        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives, partitions };
+        return { hostname: systemData.Text, os: os.platform(), uptime: os.uptime(), network, cpu, motherboard, ram, gpu, drives, partitions: storedPartitions  };
     } catch (error) {
         console.error("⚠️ Failed to fetch system stats:", error.message);
         return null;
