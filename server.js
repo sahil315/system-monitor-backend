@@ -37,7 +37,7 @@ app.post("/api/partitions", (req, res) => {
     }
 
     storedPartitions = req.body.partitions;
-    console.log("✅ Updated partitions:", storedPartitions);
+    // console.log("✅ Updated partitions:", storedPartitions);
     res.json({ message: "Partitions updated successfully" });
 });
 
@@ -164,10 +164,10 @@ const fetchSystemStats = async () => {
                 });
             }
             if (component.Text.includes("Ethernet")) {
-                console.log("📡 Found Ethernet Component:", JSON.stringify(component, null, 2));
+                // console.log("📡 Found Ethernet Component:", JSON.stringify(component, null, 2));
             
                 component.Children.forEach(sensorGroup => {
-                    console.log("🔍 Found Sensor Group:", sensorGroup.Text);
+                    // console.log("🔍 Found Sensor Group:", sensorGroup.Text);
                 });
             }
                if (component.id === 188) {
@@ -177,7 +177,7 @@ const fetchSystemStats = async () => {
                                 if (utilizationSensor) network.utilization = utilizationSensor.Value || "N/A";
                             }
                             if (sensorGroup.Text === "Data") {
-                                console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
+                                // console.log('data fro eth ' + JSON.stringify(sensorGroup.Children))
                                 sensorGroup.Children.forEach(sensor => {
                                     if (sensor.Text.includes("Data Uploaded")) network.uploaded = sensor.Value || "N/A";
                                     if (sensor.Text.includes("Data Downloaded")) network.downloaded = sensor.Value || "N/A";
